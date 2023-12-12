@@ -19,7 +19,7 @@ import da_utils_lmr
 import da_load_models
 import da_load_proxies
 import da_psms
-#import h5py
+import make_basic_figures
 
 #%% SETTINGS
 
@@ -417,4 +417,6 @@ outputfile.close()
 endtime_total = time.time()  # End timer
 print('Total time: '+str('%1.2f' % ((endtime_total-starttime_total)/60))+' minutes')
 print(' === Reconstruction complete ===')
-
+print(' === Making Figures === ')
+make_basic_figures.make_figs()
+print(' === Figures Complete ===')
