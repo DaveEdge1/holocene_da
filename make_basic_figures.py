@@ -77,4 +77,4 @@ def make_figs():
     plt.savefig(output_dir+'reconstruction_ts_gmt_'+exp_name+'.png',dpi=200,format='png',bbox_inches='tight')
     plt.close()
 
-return 1
+    return 1
