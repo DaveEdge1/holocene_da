@@ -26,9 +26,7 @@ def make_figs():
     lat      = data_xarray['lat'].values
     lon      = data_xarray['lon'].values
     exp_name = 'Holocene_DA'
-    
-    print(data_xarray.keys)
-    
+     
     
     #%% CALCULATIONS
     
