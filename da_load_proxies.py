@@ -232,9 +232,8 @@ def process_proxies(proxy_ts,collection_all,options):
         proxy_lon                 = proxy_ts[i]['geo_meanLon']
         proxy_seasonality_txt     = proxy_ts[i]['paleoData_interpretation'][0]['seasonality']
         proxy_seasonality_general = proxy_ts[i]['paleoData_interpretation'][0]['seasonalityGeneral']
-        try:    proxy_uncertainty = proxy_ts[i]['paleoData_temperature12kUncertainty']
-        except: proxy_uncertainty = missing_uncertainty_value; missing_uncertainty += 1
-        proxy_uncertainty = float(proxy_uncertainty)
+        try:    proxy_uncertainty = float(proxy_ts[i]['paleoData_temperature12kUncertainty'])
+        except: proxy_uncertainty = float(missing_uncertainty_value; missing_uncertainty += 1)
         proxy_data['archivetype'].append(proxy_ts[i]['archiveType'])
         proxy_data['proxytype'].append(proxy_ts[i]['paleoData_proxy'])
         proxy_data['units'].append(proxy_ts[i]['paleoData_units'])
