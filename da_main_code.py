@@ -166,7 +166,8 @@ else:
 #    proxy_ind_in_region = (proxy_data['lats'] >= region_lat_min) & (proxy_data['lats'] <= region_lat_max) & (proxy_data['lons'] >= region_lon_min) & (proxy_data['lons'] <= region_lon_max)
 #    print(' - Number of records in region '+str(options['assimilate_selected_region'])+': '+str(sum(proxy_ind_in_region)))
 #else:
-#    proxy_ind_in_region = np.full((n_proxies),True,dtype=bool)
+
+proxy_ind_in_region = np.full((n_proxies),True,dtype=bool)
 
 # If requested, select the proxies with median resolution within a certain window
 if options['assimilate_selected_resolution']: 
