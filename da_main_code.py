@@ -143,13 +143,14 @@ proxy_ind_with_uncertainty = np.isfinite(proxy_data['uncertainty'])
 print(' - Number of records with uncertainty values: '+str(sum(proxy_ind_with_uncertainty)))
 
 # If requested, select only proxies with certain seasonalities
-if options['assimilate_selected_seasons']:
-    proxy_ind_of_seasonality = np.full((n_proxies),False,dtype=bool)
-    ind_seasons = [i for i, seasontype in enumerate(proxy_data['metadata'][:,5]) if seasontype in options['assimilate_selected_seasons']]
-    proxy_ind_of_seasonality[ind_seasons] = True
-    print(' - Number of records with seasonalities '+str(options['assimilate_selected_seasons'])+': '+str(sum(proxy_ind_of_seasonality)))
-else:
-    proxy_ind_of_seasonality = np.full((n_proxies),True,dtype=bool)
+#if options['assimilate_selected_seasons']:
+#    proxy_ind_of_seasonality = np.full((n_proxies),False,dtype=bool)
+#    ind_seasons = [i for i, seasontype in enumerate(proxy_data['metadata'][:,5]) if seasontype in options['assimilate_selected_seasons']]
+#    proxy_ind_of_seasonality[ind_seasons] = True
+#    print(' - Number of records with seasonalities '+str(options['assimilate_selected_seasons'])+': '+str(sum(proxy_ind_of_seasonality)))
+#else:
+    
+proxy_ind_of_seasonality = np.full((n_proxies),True,dtype=bool)
 
 # If requested, select only certain archive types
 if options['assimilate_selected_archives']:
