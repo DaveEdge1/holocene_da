@@ -10,7 +10,55 @@ import numpy as np
 import pickle
 import lipd
 import glob
+import re
 from scipy import interpolate
+
+# Month abbreviation to number mapping for parsing "Mon-Mon" seasonality ranges
+_MONTH_ABBR = {
+    'jan':1,'feb':2,'mar':3,'apr':4,'may':5,'jun':6,
+    'jul':7,'aug':8,'sep':9,'oct':10,'nov':11,'dec':12
+}
+
+def _normalize_seasonality(txt):
+    """Pre-process seasonality text into a form that interpret_seasonality can handle.
+
+    Handles formats the upstream function misses:
+      - 'Mon-Mon' ranges: 'Jun-Aug' → '6 7 8', 'Nov-May' → '-11 -12 1 2 3 4 5'
+      - Single month abbreviations: 'Feb' → '2'
+      - Space-separated integers already in correct format but rejected by upstream
+        due to isinstance(str, int) bug: '2 3 4 5 6 7 8 9' → returned as-is (valid)
+      - Negative month sequences: '-9 -10 -11 -12 1 2 3' → returned as-is (valid)
+    Returns the original text unchanged if no normalization applies.
+    """
+    s = str(txt).strip()
+
+    # Mon-Mon range (e.g. Jun-Aug, Nov-May)
+    m = re.match(r'^([a-zA-Z]{3})-([a-zA-Z]{3})$', s)
+    if m:
+        start = _MONTH_ABBR.get(m.group(1).lower())
+        end   = _MONTH_ABBR.get(m.group(2).lower())
+        if start is not None and end is not None:
+            if start <= end:
+                months = list(range(start, end + 1))
+            else:
+                months = [-(mo) for mo in range(start, 13)] + list(range(1, end + 1))
+            return ' '.join(str(mo) for mo in months)
+
+    # Single month abbreviation (e.g. Feb, Jul)
+    if s.lower() in _MONTH_ABBR:
+        return str(_MONTH_ABBR[s.lower()])
+
+    # Space-separated integers (possibly negative): upstream's isinstance check is buggy
+    # so we validate and return as-is to bypass the broken fallback
+    parts = s.split()
+    if len(parts) > 1:
+        try:
+            [int(p) for p in parts]
+            return s  # already valid month-number format
+        except ValueError:
+            pass
+
+    return txt
 
 # A function to load the chosen proxy datasets
 def load_proxies(options):
@@ -230,20 +278,34 @@ def process_proxies(proxy_ts,collection_all,options):
         missing_uncertainty_value = np.nan
         proxy_lat                 = proxy_ts[i]['geo_meanLat']
         proxy_lon                 = proxy_ts[i]['geo_meanLon']
-        proxy_seasonality_txt     = proxy_ts[i]['paleoData_interpretation'][0]['seasonality']
-        proxy_seasonality_general = proxy_ts[i]['paleoData_interpretation'][0]['seasonalityGeneral']
+        _interp = proxy_ts[i].get('paleoData_interpretation', [{}])
+        _interp0 = _interp[0] if len(_interp) > 0 else {}
+        proxy_seasonality_txt     = _interp0.get('seasonality', 'annual')
+        proxy_seasonality_general = _interp0.get('seasonalityGeneral', 'annual')
         try:    proxy_uncertainty = float(proxy_ts[i]['paleoData_temperature12kUncertainty'])
         except: proxy_uncertainty = missing_uncertainty_value; missing_uncertainty += 1
-        proxy_data['archivetype'].append(proxy_ts[i]['archiveType'])
-        proxy_data['proxytype'].append(proxy_ts[i]['paleoData_proxy'])
-        proxy_data['units'].append(proxy_ts[i]['paleoData_units'])
+        proxy_data['archivetype'].append(proxy_ts[i].get('archiveType', 'Unknown'))
+        proxy_data['proxytype'].append(proxy_ts[i].get('paleoData_proxy', 'Unknown'))
+        proxy_data['units'].append(proxy_ts[i].get('paleoData_units', 'Unknown'))
         #
         # Convert seasonality to a list of months, with negative values corresponding to the previous year.
         if 'seasonality_array' in list(proxy_ts[i].keys()):
             proxy_seasonality_array = proxy_ts[i]['seasonality_array']
         else:
-            proxy_seasonality = da_utils.interpret_seasonality(proxy_seasonality_txt,proxy_lat,unknown_option='annual')
-            proxy_seasonality_array = np.array(proxy_seasonality.split()).astype(int)
+            # Pre-process seasonality text to handle formats upstream misses
+            proxy_seasonality_txt = _normalize_seasonality(proxy_seasonality_txt)
+            # Check if normalization already produced valid month numbers
+            # (bypasses upstream's broken isinstance check for space-separated ints)
+            _parts = str(proxy_seasonality_txt).split()
+            try:
+                _nums = [int(p) for p in _parts]
+                if len(_nums) > 0 and all(-12 <= n <= 12 and n != 0 for n in _nums):
+                    proxy_seasonality_array = np.array(_nums)
+                else:
+                    raise ValueError
+            except ValueError:
+                proxy_seasonality = da_utils.interpret_seasonality(proxy_seasonality_txt,proxy_lat,unknown_option='annual')
+                proxy_seasonality_array = np.array(proxy_seasonality.split()).astype(int)
         #
         # If requested, prescribe seasonalities
         if options['assign_seasonality'] == 'annual':
