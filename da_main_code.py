@@ -350,7 +350,7 @@ for key,value in options.items():
 
 #%% SAVE THE OUTPUT
 
-time_str = str(datetime.datetime.now()).replace(' ','_')
+time_str = str(datetime.datetime.now()).replace(' ','_').replace(':','-')
 output_filename = 'holocene_recon_'+time_str+'_'+str(options['exp_name'])
 print('Saving the reconstruction as '+output_filename)
 
@@ -420,5 +420,5 @@ endtime_total = time.time()  # End timer
 print('Total time: '+str('%1.2f' % ((endtime_total-starttime_total)/60))+' minutes')
 print(' === Reconstruction complete ===')
 print(' === Making Figures === ')
-make_basic_figures.make_figs()
+make_basic_figures.make_figs(results_dir=output_dir)
 print(' === Figures Complete ===')
