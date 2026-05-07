@@ -6,11 +6,11 @@ import cartopy.util as cutil
 import xarray as xr
 import os
 
-def make_figs():
+def make_figs(results_dir=None):
 
     #%% LOAD DATA
-    
-    dir1 = os.path.join(os.getcwd(), "results/")
+
+    dir1 = results_dir if results_dir else "/results/"
     
     for file in os.listdir(dir1):
         if file.endswith(".nc"):
