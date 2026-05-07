@@ -9,18 +9,14 @@ import numpy as np
 import xarray as xr
 import glob
 import da_utils
-#import netCDF4
-import h5netcdf
-import h5netcdf.legacyapi as netCDF4
+import netCDF4
 from scipy import stats
-from xarray.backends import H5netcdfBackendEntrypoint
 
 # A function to load model data
 def load_model_data(options):
     #
     model_dir          = options['data_dir']+'models/processed_model_data/'
     original_model_dir = options['data_dir']+'models/original_model_data/'
-    age_range_model_txt = str(options['age_range_model'][1]-1)+'-'+str(options['age_range_model'][0])
     #
     # Load the model data
     n_models = len(options['models_for_prior'])
@@ -30,28 +26,59 @@ def load_model_data(options):
             #
             print('Loading variable '+var_name+' for model '+str(i+1)+'/'+str(n_models)+': '+model)
             #
-            # Get the model filename
-            model_filename = model+'.'+age_range_model_txt+'BP.'+var_name+'.timeres_'+str(options['time_resolution'])+'.nc'
+            # Always use the full [0, 22000] range pre-processed file and subset in memory.
+            # This avoids needing a separate file for every age_range_model combination.
+            full_range_filename = model+'.21999-0BP.'+var_name+'.timeres_'+str(options['time_resolution'])+'.nc'
+            user_range_txt = str(options['age_range_model'][1]-1)+'-'+str(options['age_range_model'][0])
+            user_range_filename = model+'.'+user_range_txt+'BP.'+var_name+'.timeres_'+str(options['time_resolution'])+'.nc'
             #
-            # Check to see if the file exists.  If not, create it.
+            # Try: 1) full-range file, 2) exact user-range file, 3) process from originals
             filenames_all = glob.glob(model_dir+'*.nc')
             filenames_all = [filename.split('/')[-1] for filename in filenames_all]
-            if model_filename not in filenames_all:
-                print('File '+model_dir+model_filename+' does not exist.  Creating it now.')
-                process_models(model,var_name,options['time_resolution'],options['age_range_model'],model_dir,original_model_dir)
-                print('File '+model_dir+model_filename+' created!')
+            #
+            if full_range_filename in filenames_all:
+                model_filename = full_range_filename
+                subset_age_range = True
+                print('Using full-range file: '+model_filename+' (will subset to user age range)')
+            elif user_range_filename in filenames_all:
+                model_filename = user_range_filename
+                subset_age_range = False
+            else:
+                # Try to process from original model data (Zenodo fallback)
+                print('Pre-processed file not found. Attempting to create from original model data...')
+                print('  Looking for: '+full_range_filename+' or '+user_range_filename)
+                try:
+                    process_models(model,var_name,options['time_resolution'],options['age_range_model'],model_dir,original_model_dir)
+                    model_filename = user_range_filename
+                    subset_age_range = False
+                    print('File '+model_dir+model_filename+' created!')
+                except Exception as e:
+                    raise FileNotFoundError(
+                        'Pre-processed model data not found: '+model_dir+full_range_filename+'\n'
+                        'Original model data also not available for processing.\n'
+                        'Ensure model data is downloaded and mounted at '+model_dir+'\n'
+                        'Error: '+str(e)
+                    )
             #
             # Load selected variables
             model_individual = {}
-            #handle_model = xr.open_dataset(model_dir+model_filename,decode_times=False)
-            #ncFile2 = netCDF4.Dataset(model_dir+model_filename)
-            handle_model = xr.open_dataset(model_dir+model_filename, engine='h5netcdf',decode_times=False)
+            handle_model = xr.open_dataset(model_dir+model_filename,decode_times=False)
             model_data['lat']              = handle_model['lat'].values
             model_data['lon']              = handle_model['lon'].values
             model_individual['age']        = handle_model['age'].values
             model_individual['time_ndays'] = handle_model['days_per_month_all'].values
             model_individual[var_name]     = handle_model[var_name].values
             handle_model.close()
+            #
+            # Subset to user's requested age range if we loaded the full-range file
+            if subset_age_range:
+                age_min = options['age_range_model'][0]
+                age_max = options['age_range_model'][1]
+                age_mask = (model_individual['age'] >= age_min) & (model_individual['age'] < age_max)
+                model_individual['age']        = model_individual['age'][age_mask]
+                model_individual['time_ndays'] = model_individual['time_ndays'][age_mask]
+                model_individual[var_name]     = model_individual[var_name][age_mask]
+                print('  Subsetted to age range ['+str(age_min)+', '+str(age_max)+'): '+str(len(model_individual['age']))+' time steps')
             #
             # Compute annual means of the model data
             n_lat = len(model_data['lat'])
