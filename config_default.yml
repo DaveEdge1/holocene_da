@@ -5,14 +5,14 @@
 #==============================================
 
 # Location of data and lipd directories
-data_dir: '//'
+data_dir: '/projects/pd_lab/data/data_assimilation/'
 
 # Primary options
 exp_name: 'default'           # The experiment name, which will be appended to the filename. Pick something short & memorable, using only letters, numbers, and underscores.
 vars_to_reconstruct: ['tas']  # The variables to reconstruct {['tas']}.  Note, only tas is fully supported at the moment.
-time_resolution:     200 # The base temporal resolution, in years {10}
-maximum_resolution:  200     # The maximum temporal resolution to assimilate proxies at, in years {1000}
-prior_window:        5200     # The size of the window for the time-varying prior, in years {'all',5010,1010}
+time_resolution:     10       # The base temporal resolution, in years {10}
+maximum_resolution:  1000     # The maximum temporal resolution to assimilate proxies at, in years {1000}
+prior_window:        5010     # The size of the window for the time-varying prior, in years {'all',5010,1010}
 prior_mean_always_0: False    # Is the mean of the prior allowed to change through time? {True,False}. If true, the mean of the prior is always 0.
 assimate_together:   True     # If False, assimile proxies one at a time (slower) {True,False}
 localization_radius: None     # Localization radius, in meters {None,15000}  Only works if assimate_together=False
