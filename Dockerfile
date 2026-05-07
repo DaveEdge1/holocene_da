@@ -1,20 +1,21 @@
-FROM continuumio/anaconda3
+# Faithful rebuild target for davidedge/lipd_webapps:holocene_da.
+# The base image and env spec are pinned to match the live image's
+# build context so that `docker build` produces a functionally
+# equivalent container.
 
-ADD . $HOME/
+FROM continuumio/anaconda3:2024.10-1
 
-RUN conda env create -n python3_nc --file environNC.yml
+WORKDIR /app
 
-SHELL ["conda", "run", "-n", "python3_nc", "/bin/bash", "-c"]
+# Copy env spec first so the env-create layer caches across script edits.
+COPY environment_da.yml /tmp/environment_da.yml
+RUN conda env create -n python3_da --file /tmp/environment_da.yml \
+    && conda clean -afy
 
-#RUN conda install -c conda-forge h5py
+# Then copy the source tree
+COPY . /app/
 
-#RUN conda update -n base -c defaults conda && \
-#    /opt/conda/bin/conda install python=3.10.9 && \
-#    conda install -c conda-forge libnetcdf && \
-#    conda install -c anaconda h5py
-
-ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "python3_nc", "python", "da_main_code.py"]
-
-COPY results/ results/
-
-# python3 da_main_code.py config_default.yml
+# Match the live image's entrypoint exactly
+ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "python3_da", \
+            "python", "-u", "da_main_code.py"]
+CMD ["/config_default.yml"]
